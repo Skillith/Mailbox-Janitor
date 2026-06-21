@@ -6,7 +6,7 @@ const KEYS = {
 };
 
 export const getGeminiKey = (): string => {
-  return localStorage.getItem(KEYS.GEMINI_API_KEY) || '';
+  return localStorage.getItem(KEYS.GEMINI_API_KEY) || import.meta.env.VITE_GEMINI_API_KEY || '';
 };
 
 export const setGeminiKey = (key: string): void => {
