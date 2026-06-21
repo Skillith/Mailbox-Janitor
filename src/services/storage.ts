@@ -14,7 +14,7 @@ export const setGeminiKey = (key: string): void => {
 };
 
 export const getGoogleClientId = (): string => {
-  return localStorage.getItem(KEYS.GOOGLE_CLIENT_ID) || '';
+  return localStorage.getItem(KEYS.GOOGLE_CLIENT_ID) || '173528561504-uekb1laohdv4bp7loqa7i6rcj1e7nmfr.apps.googleusercontent.com';
 };
 
 export const setGoogleClientId = (id: string): void => {
