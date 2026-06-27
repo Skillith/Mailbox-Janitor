@@ -402,6 +402,12 @@ function classifyWithGemini(emails) {
                 <option value="60000">Every 1 Minute</option>
                 <option value="300000">Every 5 Minutes</option>
                 <option value="600000">Every 10 Minutes</option>
+                <option value="1800000">Every 30 Minutes</option>
+                <option value="3600000">Every 1 Hour</option>
+                <option value="14400000">Every 4 Hours</option>
+                <option value="28800000">Every 8 Hours</option>
+                <option value="43200000">Every 12 Hours</option>
+                <option value="86400000">Every 24 Hours</option>
               </select>
             </div>
 

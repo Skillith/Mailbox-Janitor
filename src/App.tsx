@@ -17,15 +17,10 @@ import { fetchInboxEmails, archiveEmails, deleteEmails, markEmailsAsRead } from 
 import { classifyEmails } from './services/gemini';
 import { Navbar } from './components/Navbar';
 import { SettingsPanel } from './components/SettingsPanel';
-import { SprintCleaner } from './components/SprintCleaner';
-import { NewsletterDigest } from './components/NewsletterDigest';
-import { RulesManager } from './components/RulesManager';
-import { Analytics } from './components/Analytics';
 import { AutoPilot } from './components/AutoPilot';
-import { Key, ShieldAlert, LogIn } from 'lucide-react';
+import { Key, ShieldAlert, LogIn, X } from 'lucide-react';
 
 function App() {
-  const [currentTab, setCurrentTab] = useState<string>('sprints');
   const [geminiKey, setGeminiKey] = useState<string>('');
   const [clientId, setClientId] = useState<string>('');
   const [accessToken, setAccessToken] = useState<string>('');
@@ -36,6 +31,7 @@ function App() {
   const [isAutopilotActive, setIsAutopilotActive] = useState<boolean>(false);
   const [isAutopilotScanning, setIsAutopilotScanning] = useState<boolean>(false);
   const [lastScanTime, setLastScanTime] = useState<number>(0);
+  const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
 
   // 1. Load keys from storage on mount
   const loadKeys = () => {
@@ -44,9 +40,9 @@ function App() {
     setGeminiKey(key);
     setClientId(id);
     
-    // Redirect to settings if keys are not configured
+    // Open settings modal if keys are not configured
     if (!key || !id) {
-      setCurrentTab('settings');
+      setShowSettingsModal(true);
     }
   };
 
@@ -259,14 +255,16 @@ function App() {
     if (!isConfigured) {
       return (
         <div style={{ maxWidth: '640px', margin: '40px auto 0' }}>
-          <div className="glass-panel" style={{ padding: '24px', marginBottom: '20px', textAlign: 'center', borderColor: 'var(--accent-purple-glow)' }}>
-            <Key size={32} style={{ color: 'var(--accent-purple)', marginBottom: '12px' }} />
-            <h2 style={{ color: 'var(--text-primary)', marginBottom: '6px' }}>Configure API Credentials</h2>
-            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-              Welcome to Mailbox Janitor! To analyze your emails with AI, please configure your private Gemini API Key and Google Client ID.
+          <div className="glass-panel" style={{ padding: '36px', textAlign: 'center', borderColor: 'var(--accent-purple-glow)' }}>
+            <Key size={48} style={{ color: 'var(--accent-purple)', marginBottom: '16px' }} />
+            <h2 style={{ color: 'var(--text-primary)', marginBottom: '10px', fontSize: '22px' }}>API Configuration Required</h2>
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: '1.6' }}>
+              Welcome to Mailbox Janitor! To start scanning and cleaning your emails with AI, please configure your private Gemini API Key and Google Client ID.
             </p>
+            <button onClick={() => setShowSettingsModal(true)} className="btn-primary" style={{ padding: '12px 24px' }}>
+              Configure API Credentials
+            </button>
           </div>
-          <SettingsPanel onSaved={loadKeys} />
         </div>
       );
     }
@@ -320,51 +318,94 @@ function App() {
       );
     }
 
-    switch (currentTab) {
-      case 'sprints':
-        return <SprintCleaner accessToken={accessToken} geminiKey={geminiKey} onActionLogged={handleActionLogged} />;
-      case 'digest':
-        return <NewsletterDigest accessToken={accessToken} geminiKey={geminiKey} onActionLogged={handleActionLogged} />;
-      case 'rules':
-        return <RulesManager />;
-      case 'autopilot':
-        return (
-          <AutoPilot 
-            geminiKey={geminiKey} 
-            isAutopilotActive={isAutopilotActive} 
-            setIsAutopilotActive={setIsAutopilotActive} 
-            onForceScan={runAutopilotScan}
-            isScanning={isAutopilotScanning}
-          />
-        );
-      case 'analytics':
-        return <Analytics />;
-      case 'settings':
-        return <SettingsPanel onSaved={loadKeys} />;
-      default:
-        return <SprintCleaner accessToken={accessToken} geminiKey={geminiKey} onActionLogged={handleActionLogged} />;
-    }
+    return (
+      <AutoPilot 
+        geminiKey={geminiKey} 
+        isAutopilotActive={isAutopilotActive} 
+        setIsAutopilotActive={setIsAutopilotActive} 
+        onForceScan={runAutopilotScan}
+        isScanning={isAutopilotScanning}
+      />
+    );
   };
 
   return (
     <div className="layout-container">
       
-      {/* Navbar always visible */}
+      {/* App Header */}
       <Navbar 
-        currentTab={currentTab} 
-        setCurrentTab={setCurrentTab} 
         isConfigured={isConfigured} 
         isAuthenticated={isAuthenticated}
         userEmail={userEmail}
         onLogin={handleLogin}
         onLogout={handleLogout}
-        isAutopilotActive={isAutopilotActive}
+        onOpenSettings={() => setShowSettingsModal(true)}
       />
 
       {/* Main Area */}
       <main style={{ flex: 1, paddingBottom: '40px' }}>
         {renderTabContent()}
       </main>
+
+      {/* Settings Modal Dialog Overlay */}
+      {showSettingsModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(5, 4, 15, 0.65)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px',
+          animation: 'fadeIn 0.3s ease-out'
+        }}>
+          <div className="glass-panel animate-fade-in" style={{
+            width: '100%',
+            maxWidth: '560px',
+            padding: '24px',
+            position: 'relative',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)'
+          }}>
+            <button
+              onClick={() => setShowSettingsModal(false)}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                padding: '6px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease'
+              }}
+              className="btn-hover-indicator"
+            >
+              <X size={18} />
+            </button>
+            
+            <h2 style={{ fontSize: '20px', color: 'var(--text-primary)', marginBottom: '16px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '12px' }}>
+              API Credentials
+            </h2>
+            
+            <SettingsPanel onSaved={() => {
+              loadKeys();
+              setShowSettingsModal(false);
+            }} />
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer style={{ 
