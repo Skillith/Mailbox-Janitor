@@ -1,103 +1,73 @@
-# Mailbox Janitor 🧹
+# Mailbox Janitor 🧹🤖
 
-> A smart, privacy-first email-cleaning assistant designed to help you regain control over cluttered inboxes, focus on high-value conversations, and automate repetitive cleanup tasks.
-
----
-
-## 📖 Table of Contents
-1. [Core Vision](#-core-vision)
-2. [Key Features](#-key-features)
-3. [User Experience & Product Feel](#-user-experience--product-feel)
-4. [Proposed Architectures](#-proposed-architectures)
-5. [Security & Privacy Guarantees](#-security--privacy-guarantees)
-6. [Roadmap](#-roadmap)
+> A smart, privacy-first Gmail AI Auto-Pilot Agent that automatically scans, classifies, and cleans your incoming emails in the background so you can focus on conversations that actually matter.
 
 ---
 
-## 🎯 Core Vision
+## 🎯 The Vision
 
-**Mailbox Janitor** is not just another email client. It is a calm, competent assistant that works in the background to handle the "noise" of your inbox (newsletters, shipping updates, social notifications, promotional alerts) so you can focus on the signals that actually matter.
+**Mailbox Janitor** is a dedicated automation agent designed to eliminate email noise. It reads your unread inbox emails using Gemini 2.5 Flash, classifies them into logical categories, and automatically executes actions (like marking newsletters as read, archiving promotional clutter, or ignoring important personal updates) based on your custom rules.
 
-*   **Opinionated but Safe:** It suggests confident cleaning actions but never deletes, archives, or unsubscribes without your explicit consent.
-*   **Minimal Friction:** It doesn't ask complicated questions. It groups, summarizes, and offers one-click resolutions.
-*   **Privacy-First:** Senders, subjects, and snippets contain highly sensitive personal data. Mailbox Janitor uses secure AI processing with zero-data-retention parameters.
+*   **100% Client-Side:** Your emails are analyzed directly in your browser. Your API keys and OAuth tokens are never sent to or stored on a third-party server.
+*   **Privacy-First:** Utilizes enterprise-grade Gemini API processing with zero data retention parameters.
+*   **Zero Infrastructure Costs:** Runs entirely in your browser using your own credentials (Bring Your Own Key / BYOK model).
 
 ---
 
 ## 🌟 Key Features
 
-### 🔍 1. Intelligent Analysis & Categorization
-Instead of standard folder-filtering, Mailbox Janitor reads email headers and snippets using LLMs to group your inbox into actionable categories:
-*   **Important & Personal:** Emails requiring human attention.
-*   **Newsletters & Subscriptions:** Reading material.
-*   **Automated Notifications:** Shipping notices, order confirmations, password resets.
-*   **Low-Value Clutter:** Cold sales pitches, bulk promotions, spam-adjacent mail.
+### 🤖 1. Real-Time Auto-Pilot
+Toggle the agent on and let it work in the background. It periodically scans your inbox, classifies new unread messages, and automatically cleans them without requiring manual clicks.
 
-### 🧹 2. Batch-Cleaning ("Sprints")
-Never review emails one by one. Mailbox Janitor aggregates messages into logical clean-up bundles:
-*   *"Archive these 120 shipping notices from last month?"*
-*   *"Delete these 65 promotional emails older than 30 days?"*
-*   *"Unsubscribe from these 8 newsletters you haven't opened in 90 days?"*
+### 📊 2. Intelligent Categorization
+The agent reads email headers and snippets using Gemini AI to sort messages into:
+*   **Important & Personal:** Kept in the inbox.
+*   **Newsletters:** Auto-processed (e.g. marked as read, archived, or deleted).
+*   **Notifications:** Tool alerts, receipts, shipping updates (custom rules).
+*   **Low-Value Clutter:** Marketing, ads, spam-adjacent pitches.
 
-### ⚙️ 3. Auto-Filter Generation (The Permanent Fix)
-Instead of forcing you to clean the same clutter repeatedly, Mailbox Janitor helps you fix it at the source:
-*   If you bulk-archive or delete emails from a specific sender multiple times, it offers to generate a permanent filter (e.g., automatically skip the inbox, mark as read, or apply a specific label).
+### 📟 3. Live Activity Console
+Watch the agent work in real-time through a retro-style terminal emulator. View scan timestamps, classification categories, reasons, and actions taken (e.g. `[SUCCESS] Classified as newsletter. Action: MARK AS READ`).
 
-### 📰 4. Smart Newsletter Digest
-Stop letting newsletters clutter your main feed. Mailbox Janitor can automatically label and move newsletters out of the main inbox and present them in a single, beautifully structured, readable daily or weekly magazine-style digest.
-
-### 🧠 5. Learning & Preference Tracking
-The janitor learns your preferences silently:
-*   **Whitelist Senders:** Senders you *never* want the janitor to suggest cleaning.
-*   **Supervised Automation:** Gradually reduces prompt frequency for senders you consistently clean in the same way.
+### ☁️ 4. Free 24/7 Headless Support
+Want the agent to run 24/7 even when your browser tab is closed? We include a copy-pasteable **Google Apps Script** snippet inside the dashboard. You can set it up in Google Cloud in under 3 minutes for free.
 
 ---
 
-## 🎨 User Experience & Product Feel
+## 🚀 Setup & Installation
 
-*   **The "Swipe-to-Clean" Sweep:** A fast, mobile-friendly interface to quickly accept or reject proposed batch actions.
-*   **Digest Summaries:** Clear, non-intrusive notification reports:
-    *   *"Top 5 senders caused 75% of your clutter this week."*
-    *   *"I staged 450 emails for deletion. Approve them in 2 clicks."*
-*   **No Shady Actions:** The assistant never replies to emails, sends emails, or alters your mailbox configuration without permission.
+Since this is a client-side web application, you can run it directly on GitHub Pages or locally:
 
----
+### 1. Configure Google Credentials
+To securely read and clean your mailbox:
+1. Create a project in the [Google Cloud Console](https://console.cloud.google.com/).
+2. Enable the **Gmail API**.
+3. Create an **OAuth Client ID** (Web application) and add your deployment URL (e.g., `https://yourname.github.io`) to the **Authorized JavaScript origins**.
+4. Set the publishing status of your OAuth Consent Screen to **Testing** and add your Gmail address as a test user.
 
-## 🏗️ Proposed Architectures
+### 2. Configure Gemini API Key
+1. Get a free API Key from [Google AI Studio](https://aistudio.google.com/).
 
-We are evaluating three primary architectures to scale Mailbox Janitor easily and cost-effectively, avoiding Google's expensive REST API restricted-scope security audit ($15,000–$75,000/year):
-
-### Option A: Firebase Web App (Hybrid Auth/BYOK)
-*   **Tech Stack:** Next.js (React) + Firebase (Auth, Firestore, Cloud Functions).
-*   **Auth:** Google Sign-In (OAuth 2.0) using Firebase Auth.
-*   **AI:** Gemini 3.5 Flash API (highly optimized, cost-efficient classification).
-*   **Scaling Strategy:** Bypasses audit requirements during development and early access by operating in **OAuth Testing Mode** (supporting up to 100 users) or using the **"Bring Your Own API Key/Client ID"** configuration model for power users.
-
-### Option B: DOM-Based Chrome Extension
-*   **Tech Stack:** JavaScript (React) + Manifest V3 Chrome Extension.
-*   **How it works:** Injects UI components directly into the Gmail web page. It reads the visible inbox DOM nodes and automates archival/deletion by simulating native keyboard shortcuts (e.g., pressing `e` to archive).
-*   **Scaling Strategy:** **Zero Audit Required.** Because it does not directly use the Gmail REST API backend scopes, it does not trigger Google's restricted-scope audit. 
-*   **Server Cost:** $0 (runs entirely in the browser using the user's local computing resources and Gemini API keys).
-
-### Option C: Local Desktop App (Tauri / Rust)
-*   **Tech Stack:** Tauri + Rust + React.
-*   **How it works:** A local-first mail application that connects to Gmail (and other providers) via standard **IMAP/SMTP**. 
-*   **Scaling Strategy:** Bypasses Google API audits because it operates as a native local mail client (like Outlook or Thunderbird). All indexing and processing are completely local.
+### 3. Open the App
+1. Go to the app URL (e.g. `https://skillith.github.io/Mailbox-Janitor/`).
+2. Click **API Config** in the header and paste your Google Client ID and Gemini API Key.
+3. Click **Sign In with Google** and authorize the application.
+4. Toggle **Activate Auto-Pilot**!
 
 ---
 
-## 🔒 Security & Privacy Guarantees
+## 🛠️ Tech Stack
 
-*   **Zero-Data-Retention AI:** All email snippet classification is processed via enterprise-grade APIs with zero-data-retention policies. Your emails are never used to train machine learning models.
-*   **Read-Only Analysis:** Analysis is separate from modification. The AI evaluates text snippets, and modifications are triggered locally by secure, client-side actions.
-*   **No Credentials Storage:** Your Google/IMAP passwords are never saved on a central server. All authentication tokens are encrypted and managed using Firebase/Google security best practices or stored locally on your device.
+*   **Frontend:** React 19 + TypeScript + Vite
+*   **Styling:** Custom glassmorphic CSS animations
+*   **AI Engine:** `@google/generative-ai` (Gemini 2.5 Flash)
+*   **API Integrations:** Gmail REST API (fetch, batchModify, settings/filters)
+*   **Hosting:** GitHub Pages (automated deployment workflow)
 
 ---
 
-## 🚀 Roadmap
+## 🔒 Security & Privacy
 
-- [ ] **Phase 1: Local CLI/Prototype** – Connect to Gmail, query with Gemini 3.5 Flash, and test classification accuracy.
-- [ ] **Phase 2: Database Schema & Authentication** – Set up Firebase Authentication, Firestore, and the scheduled worker function logic.
-- [ ] **Phase 3: Web Dashboard / UI Mockup** – Design a beautiful, premium, glassmorphic layout for the newsletter digest, batch cleaning, and analytics.
-- [ ] **Phase 4: Auto-Filter Engine** – Implement automated Gmail rule creation based on cleanup recommendations.
-- [ ] **Phase 5: Release Integration** – Package as a Chrome Extension or a "Bring Your Own Key" Web App for early testing.
+*   **No Databases:** All settings and logs are saved inside your browser's local storage.
+*   **Direct Connections:** API requests travel directly from your browser to Google Gmail and Google Gemini servers.
+*   **Safe Scopes:** The app is configured with read-write scopes required to archive and mark mail as read but never sends or drafts emails.
