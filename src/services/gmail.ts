@@ -7,8 +7,8 @@ export interface GmailEmail {
   subject: string;
   snippet: string;
   date: string;
+  labelIds?: string[];
 }
-
 /**
  * Parses the "From" header of an email into separate name and email parts.
  * Example: "Google Alerts <googlealerts-noreply@google.com>" 
@@ -90,6 +90,7 @@ export const fetchInboxEmails = async (
         subject,
         snippet: detailData.snippet || '',
         date,
+        labelIds: detailData.labelIds || [],
       } as GmailEmail;
     });
 

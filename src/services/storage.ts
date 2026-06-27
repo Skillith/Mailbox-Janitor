@@ -3,10 +3,15 @@ const KEYS = {
   GOOGLE_CLIENT_ID: 'mbj_google_client_id',
   WHITELISTED_SENDERS: 'mbj_whitelisted_senders',
   AUTO_CLEANED_SENDERS: 'mbj_auto_cleaned_senders',
+  AUTOPILOT_ENABLED: 'mbj_autopilot_enabled',
+  AUTOPILOT_INTERVAL: 'mbj_autopilot_interval',
+  AUTOPILOT_RULES: 'mbj_autopilot_rules',
+  AUTOPILOT_LOGS: 'mbj_autopilot_logs',
+  PROCESSED_EMAILS: 'mbj_processed_emails',
 };
 
 export const getGeminiKey = (): string => {
-  return localStorage.getItem(KEYS.GEMINI_API_KEY) || import.meta.env.VITE_GEMINI_API_KEY || '';
+  return localStorage.getItem(KEYS.GEMINI_API_KEY) || '';
 };
 
 export const setGeminiKey = (key: string): void => {
@@ -92,6 +97,11 @@ export const clearAllSettings = (): void => {
   localStorage.removeItem(KEYS.GOOGLE_CLIENT_ID);
   localStorage.removeItem(KEYS.WHITELISTED_SENDERS);
   localStorage.removeItem(KEYS.AUTO_CLEANED_SENDERS);
+  localStorage.removeItem(KEYS.AUTOPILOT_ENABLED);
+  localStorage.removeItem(KEYS.AUTOPILOT_INTERVAL);
+  localStorage.removeItem(KEYS.AUTOPILOT_RULES);
+  localStorage.removeItem(KEYS.AUTOPILOT_LOGS);
+  localStorage.removeItem(KEYS.PROCESSED_EMAILS);
   localStorage.removeItem('mbj_metric_archived');
   localStorage.removeItem('mbj_metric_deleted');
   localStorage.removeItem('mbj_metric_read');
@@ -118,4 +128,109 @@ export const incrementMetric = (type: 'archive' | 'delete' | 'read', amount = 1)
   const cleanKey = type === 'read' ? 'mbj_metric_read' : `mbj_metric_${type}ed`;
   const current = parseInt(localStorage.getItem(cleanKey) || '0', 10);
   localStorage.setItem(cleanKey, (current + amount).toString());
+};
+
+// --- Auto-Pilot storage APIs ---
+
+export const getAutopilotEnabled = (): boolean => {
+  return localStorage.getItem(KEYS.AUTOPILOT_ENABLED) === 'true';
+};
+
+export const setAutopilotEnabled = (enabled: boolean): void => {
+  localStorage.setItem(KEYS.AUTOPILOT_ENABLED, enabled ? 'true' : 'false');
+};
+
+export const getAutopilotInterval = (): number => {
+  const val = localStorage.getItem(KEYS.AUTOPILOT_INTERVAL);
+  return val ? parseInt(val, 10) : 60000; // Default 1 minute
+};
+
+export const setAutopilotInterval = (intervalMs: number): void => {
+  localStorage.setItem(KEYS.AUTOPILOT_INTERVAL, intervalMs.toString());
+};
+
+export type AutopilotAction = 'read' | 'archive' | 'delete' | 'ignore';
+
+export interface AutopilotRules {
+  personal: 'ignore';
+  newsletter: AutopilotAction;
+  notification: AutopilotAction;
+  clutter: AutopilotAction;
+}
+
+const DEFAULT_AUTOPILOT_RULES: AutopilotRules = {
+  personal: 'ignore',
+  newsletter: 'read', // Auto-mark read by default
+  notification: 'ignore',
+  clutter: 'archive', // Auto-archive clutter by default
+};
+
+export const getAutopilotRules = (): AutopilotRules => {
+  try {
+    const data = localStorage.getItem(KEYS.AUTOPILOT_RULES);
+    return data ? { ...DEFAULT_AUTOPILOT_RULES, ...JSON.parse(data) } : DEFAULT_AUTOPILOT_RULES;
+  } catch {
+    return DEFAULT_AUTOPILOT_RULES;
+  }
+};
+
+export const setAutopilotRules = (rules: Partial<AutopilotRules>): void => {
+  const current = getAutopilotRules();
+  localStorage.setItem(KEYS.AUTOPILOT_RULES, JSON.stringify({ ...current, ...rules }));
+};
+
+export interface AutopilotLog {
+  id: string;
+  timestamp: string;
+  text: string;
+  type: 'info' | 'success' | 'warn' | 'error';
+}
+
+export const getAutopilotLogs = (): AutopilotLog[] => {
+  try {
+    const data = localStorage.getItem(KEYS.AUTOPILOT_LOGS);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const addAutopilotLog = (text: string, type: 'info' | 'success' | 'warn' | 'error' = 'info'): void => {
+  const logs = getAutopilotLogs();
+  const newLog: AutopilotLog = {
+    id: Math.random().toString(36).substring(2, 9),
+    timestamp: new Date().toLocaleTimeString(),
+    text,
+    type,
+  };
+  
+  // Keep only the latest 100 logs
+  const updatedLogs = [newLog, ...logs].slice(0, 100);
+  localStorage.setItem(KEYS.AUTOPILOT_LOGS, JSON.stringify(updatedLogs));
+};
+
+export const clearAutopilotLogs = (): void => {
+  localStorage.removeItem(KEYS.AUTOPILOT_LOGS);
+};
+
+export const getProcessedEmails = (): string[] => {
+  try {
+    const data = localStorage.getItem(KEYS.PROCESSED_EMAILS);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const addProcessedEmail = (id: string): void => {
+  const list = getProcessedEmails();
+  if (!list.includes(id)) {
+    // Keep last 300 email IDs to prevent bloating
+    const updated = [id, ...list].slice(0, 300);
+    localStorage.setItem(KEYS.PROCESSED_EMAILS, JSON.stringify(updated));
+  }
+};
+
+export const clearProcessedEmails = (): void => {
+  localStorage.removeItem(KEYS.PROCESSED_EMAILS);
 };

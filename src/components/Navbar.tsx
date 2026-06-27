@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Trash2, Mail, FileText, Settings, LogIn, LogOut, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Sparkles, Trash2, Mail, FileText, Settings, LogIn, LogOut, CheckCircle, AlertTriangle, Cpu } from 'lucide-react';
 
 interface NavbarProps {
   currentTab: string;
@@ -9,6 +9,7 @@ interface NavbarProps {
   userEmail: string;
   onLogin: () => void;
   onLogout: () => void;
+  isAutopilotActive?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -19,11 +20,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   userEmail,
   onLogin,
   onLogout,
+  isAutopilotActive = false,
 }) => {
   const tabs = [
     { id: 'sprints', name: 'Cleaning Sprints', icon: Trash2 },
     { id: 'digest', name: 'Newsletter Digest', icon: Mail },
     { id: 'rules', name: 'Rules & Auto-Filter', icon: FileText },
+    { id: 'autopilot', name: 'Auto-Pilot', icon: Cpu },
     { id: 'analytics', name: 'Analytics', icon: Sparkles },
     { id: 'settings', name: 'API Configuration', icon: Settings },
   ];
@@ -69,6 +72,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = currentTab === tab.id;
+          const isAutopilotTab = tab.id === 'autopilot';
+          
           return (
             <button
               id={`nav-tab-${tab.id}`}
@@ -88,11 +93,30 @@ export const Navbar: React.FC<NavbarProps> = ({
                 fontWeight: isActive ? 600 : 500,
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
+                position: 'relative',
               }}
               className={isActive ? '' : 'btn-hover-indicator'}
             >
-              <Icon size={15} style={{ color: isActive ? 'var(--accent-purple)' : 'inherit' }} />
+              <Icon size={15} style={{ 
+                color: isActive ? 'var(--accent-purple)' : 'inherit',
+              }} />
               {tab.name}
+              
+              {isAutopilotTab && isAutopilotActive && (
+                <span 
+                  className="animate-pulse"
+                  style={{
+                    position: 'absolute',
+                    top: '2px',
+                    right: '2px',
+                    width: '6px',
+                    height: '6px',
+                    background: '#10b981',
+                    borderRadius: '50%',
+                    boxShadow: '0 0 8px #10b981',
+                  }} 
+                />
+              )}
             </button>
           );
         })}

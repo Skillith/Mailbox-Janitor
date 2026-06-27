@@ -1,12 +1,27 @@
 import { useState, useEffect } from 'react';
-import { getGeminiKey, getGoogleClientId, incrementMetric } from './services/storage';
+import { 
+  getGeminiKey, 
+  getGoogleClientId, 
+  incrementMetric,
+  getAutopilotEnabled,
+  getAutopilotInterval,
+  getAutopilotRules,
+  getProcessedEmails,
+  addProcessedEmail,
+  getWhitelistedSenders,
+  getAutoCleanRules,
+  addAutopilotLog 
+} from './services/storage';
 import { loadGoogleScripts, initGoogleAuth, loginGoogle, logoutGoogle } from './services/googleAuth';
+import { fetchInboxEmails, archiveEmails, deleteEmails, markEmailsAsRead } from './services/gmail';
+import { classifyEmails } from './services/gemini';
 import { Navbar } from './components/Navbar';
 import { SettingsPanel } from './components/SettingsPanel';
 import { SprintCleaner } from './components/SprintCleaner';
 import { NewsletterDigest } from './components/NewsletterDigest';
 import { RulesManager } from './components/RulesManager';
 import { Analytics } from './components/Analytics';
+import { AutoPilot } from './components/AutoPilot';
 import { Key, ShieldAlert, LogIn } from 'lucide-react';
 
 function App() {
@@ -17,6 +32,10 @@ function App() {
   const [userEmail, setUserEmail] = useState<string>('');
   const [isScriptLoaded, setIsScriptLoaded] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string>('');
+  
+  const [isAutopilotActive, setIsAutopilotActive] = useState<boolean>(false);
+  const [isAutopilotScanning, setIsAutopilotScanning] = useState<boolean>(false);
+  const [lastScanTime, setLastScanTime] = useState<number>(0);
 
   // 1. Load keys from storage on mount
   const loadKeys = () => {
@@ -81,6 +100,138 @@ function App() {
       console.error('Error fetching user profile:', e);
     }
   };
+
+  // Initialize Auto-Pilot status
+  useEffect(() => {
+    setIsAutopilotActive(getAutopilotEnabled());
+  }, []);
+
+  const runAutopilotScan = async () => {
+    if (!accessToken || !geminiKey || isAutopilotScanning) return;
+    
+    setIsAutopilotScanning(true);
+    setLastScanTime(Date.now());
+    
+    addAutopilotLog('Scanning inbox...', 'info');
+    
+    try {
+      const fetched = await fetchInboxEmails(accessToken, 20);
+      if (fetched.length === 0) {
+        addAutopilotLog('Inbox is empty. No emails to process.', 'info');
+        setIsAutopilotScanning(false);
+        return;
+      }
+
+      const processedIds = getProcessedEmails();
+      const whitelist = getWhitelistedSenders();
+      
+      const unreadEmails = fetched.filter(email => {
+        const isUnread = email.labelIds?.includes('UNREAD');
+        const isProcessed = processedIds.includes(email.id);
+        const isWhitelisted = whitelist.includes(email.fromEmail);
+        return isUnread && !isProcessed && !isWhitelisted;
+      });
+
+      if (unreadEmails.length === 0) {
+        addAutopilotLog('No new unread or unprocessed emails found.', 'info');
+        setIsAutopilotScanning(false);
+        return;
+      }
+
+      addAutopilotLog(`Found ${unreadEmails.length} new unread email(s). Classifying...`, 'info');
+
+      const emailMetadata = unreadEmails.map(e => ({
+        id: e.id,
+        sender: e.from,
+        subject: e.subject,
+        snippet: e.snippet
+      }));
+
+      const classifications = await classifyEmails(geminiKey, emailMetadata);
+      
+      const rules = getAutopilotRules();
+      const autoCleanRules = getAutoCleanRules();
+
+      const toArchive: string[] = [];
+      const toDelete: string[] = [];
+      const toRead: string[] = [];
+
+      for (const email of unreadEmails) {
+        const classification = classifications.find(c => c.id === email.id);
+        const category = classification?.category || 'personal';
+        const reason = classification?.reason || 'Unclassified';
+        
+        addProcessedEmail(email.id);
+
+        const matchedSenderRule = autoCleanRules.find(r => r.email === email.fromEmail);
+        if (matchedSenderRule) {
+          const action = matchedSenderRule.action;
+          addAutopilotLog(`Matched custom rule for "${email.fromName}": Auto-${action}`, 'success');
+          if (action === 'archive') toArchive.push(email.id);
+          else if (action === 'delete') toDelete.push(email.id);
+          else if (action === 'read') toRead.push(email.id);
+          continue;
+        }
+
+        const ruleAction = rules[category];
+        if (!ruleAction || ruleAction === 'ignore') {
+          addAutopilotLog(`"${email.fromName}" classified as ${category} (${reason}). Action: KEPT`, 'info');
+          continue;
+        }
+
+        addAutopilotLog(`"${email.fromName}" classified as ${category} (${reason}). Action: ${ruleAction.toUpperCase()}`, 'success');
+        
+        if (ruleAction === 'archive') toArchive.push(email.id);
+        else if (ruleAction === 'delete') toDelete.push(email.id);
+        else if (ruleAction === 'read') toRead.push(email.id);
+      }
+
+      if (toArchive.length > 0) {
+        await archiveEmails(accessToken, toArchive);
+        handleActionLogged('archive', toArchive.length);
+      }
+      if (toDelete.length > 0) {
+        await deleteEmails(accessToken, toDelete);
+        handleActionLogged('delete', toDelete.length);
+      }
+      if (toRead.length > 0) {
+        await markEmailsAsRead(accessToken, toRead);
+        handleActionLogged('read', toRead.length);
+      }
+
+      const totalCleaned = toArchive.length + toDelete.length + toRead.length;
+      addAutopilotLog(`Scan complete. Processed ${unreadEmails.length} email(s), cleaned ${totalCleaned}.`, 'success');
+
+    } catch (error: any) {
+      console.error('Auto-Pilot error:', error);
+      addAutopilotLog(`Scan failed: ${error.message || error}`, 'error');
+    } finally {
+      setIsAutopilotScanning(false);
+    }
+  };
+
+  // Background Loop Effect
+  useEffect(() => {
+    if (!isAutopilotActive || !accessToken || !geminiKey) return;
+
+    const interval = getAutopilotInterval();
+    const now = Date.now();
+    
+    // Scan immediately if we haven't run recently
+    if (now - lastScanTime >= interval) {
+      runAutopilotScan();
+    }
+
+    const timer = setInterval(() => {
+      const currentInterval = getAutopilotInterval();
+      const currentNow = Date.now();
+      if (currentNow - lastScanTime >= currentInterval) {
+        runAutopilotScan();
+      }
+    }, 10000); // Check every 10 seconds
+
+    return () => clearInterval(timer);
+  }, [isAutopilotActive, accessToken, geminiKey, lastScanTime]);
 
   const handleLogin = () => {
     try {
@@ -176,6 +327,16 @@ function App() {
         return <NewsletterDigest accessToken={accessToken} geminiKey={geminiKey} onActionLogged={handleActionLogged} />;
       case 'rules':
         return <RulesManager />;
+      case 'autopilot':
+        return (
+          <AutoPilot 
+            geminiKey={geminiKey} 
+            isAutopilotActive={isAutopilotActive} 
+            setIsAutopilotActive={setIsAutopilotActive} 
+            onForceScan={runAutopilotScan}
+            isScanning={isAutopilotScanning}
+          />
+        );
       case 'analytics':
         return <Analytics />;
       case 'settings':
@@ -197,6 +358,7 @@ function App() {
         userEmail={userEmail}
         onLogin={handleLogin}
         onLogout={handleLogout}
+        isAutopilotActive={isAutopilotActive}
       />
 
       {/* Main Area */}
