@@ -38,7 +38,7 @@ export const AutoPilot: React.FC<AutoPilotProps> = ({
   const [logs, setLogs] = useState<AutopilotLog[]>([]);
   const [activeSubTab, setActiveSubTab] = useState<'gas' | 'n8n'>('gas');
   const [copied, setCopied] = useState<boolean>(false);
-  const terminalEndRef = useRef<HTMLDivElement>(null);
+  const terminalRef = useRef<HTMLDivElement>(null);
 
   // Load initial settings
   useEffect(() => {
@@ -57,7 +57,12 @@ export const AutoPilot: React.FC<AutoPilotProps> = ({
 
   // Scroll terminal to bottom when logs change
   useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (terminalRef.current) {
+      terminalRef.current.scrollTo({
+        top: terminalRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
   }, [logs]);
 
   const handleToggleActive = () => {
@@ -450,19 +455,22 @@ function classifyWithGemini(emails) {
           </div>
 
           {/* Terminal Body */}
-          <div style={{ 
-            flex: 1, 
-            background: '#04030d', 
-            borderRadius: '10px', 
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            padding: '16px',
-            fontFamily: 'monospace',
-            fontSize: '12px',
-            overflowY: 'auto',
-            lineHeight: '1.6',
-            color: '#a7f3d0',
-            textAlign: 'left'
-          }}>
+          <div 
+            ref={terminalRef}
+            style={{ 
+              flex: 1, 
+              background: '#04030d', 
+              borderRadius: '10px', 
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+              padding: '16px',
+              fontFamily: 'monospace',
+              fontSize: '12px',
+              overflowY: 'auto',
+              lineHeight: '1.6',
+              color: '#a7f3d0',
+              textAlign: 'left'
+            }}
+          >
             <div>[SYSTEM] Mailbox Janitor Auto-Pilot Daemon Initialized.</div>
             {isAutopilotActive && <div>[SYSTEM] Daemon active. Periodically scanning inbox...</div>}
             
@@ -486,7 +494,6 @@ function classifyWithGemini(emails) {
                 );
               })
             )}
-            <div ref={terminalEndRef} />
           </div>
 
         </div>
