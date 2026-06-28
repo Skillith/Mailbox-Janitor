@@ -12,7 +12,7 @@ import {
   getAutoCleanRules,
   addAutopilotLog 
 } from './services/storage';
-import { loadGoogleScripts, initGoogleAuth, loginGoogle, logoutGoogle } from './services/googleAuth';
+import { loadGoogleScripts, initGoogleAuth, loginGoogle, logoutGoogle, refreshGoogleTokenSilently } from './services/googleAuth';
 import { fetchInboxEmails, archiveEmails, deleteEmails, markEmailsAsRead } from './services/gmail';
 import { classifyEmails } from './services/gemini';
 import { Navbar } from './components/Navbar';
@@ -32,6 +32,7 @@ function App() {
   const [isAutopilotScanning, setIsAutopilotScanning] = useState<boolean>(false);
   const [lastScanTime, setLastScanTime] = useState<number>(0);
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
+  const [tokenExpiryTime, setTokenExpiryTime] = useState<number>(0);
 
   // 1. Load keys from storage on mount
   const loadKeys = () => {
@@ -71,6 +72,7 @@ function App() {
         clientId,
         (response) => {
           setAccessToken(response.access_token);
+          setTokenExpiryTime(Date.now() + (response.expires_in || 3600) * 1000);
           fetchUserProfile(response.access_token);
           setAuthError('');
         },
@@ -104,6 +106,15 @@ function App() {
 
   const runAutopilotScan = async () => {
     if (!accessToken || !geminiKey || isAutopilotScanning) return;
+    
+    // Check if token is expired or close to expiring (within 2 minutes)
+    const isTokenExpiring = tokenExpiryTime > 0 && (Date.now() + 120000 >= tokenExpiryTime);
+    if (isTokenExpiring) {
+      addAutopilotLog('OAuth access token is expiring soon. Initiating silent refresh...', 'info');
+      refreshGoogleTokenSilently();
+      setIsAutopilotScanning(false);
+      return;
+    }
     
     setIsAutopilotScanning(true);
     setLastScanTime(Date.now());
@@ -201,6 +212,12 @@ function App() {
     } catch (error: any) {
       console.error('Auto-Pilot error:', error);
       addAutopilotLog(`Scan failed: ${error.message || error}`, 'error');
+      
+      const errStr = String(error.message || error).toLowerCase();
+      if (errStr.includes('401') || errStr.includes('unauthorized') || errStr.includes('invalid credentials')) {
+        addAutopilotLog('Authentication error detected. Attempting silent token refresh...', 'warn');
+        refreshGoogleTokenSilently();
+      }
     } finally {
       setIsAutopilotScanning(false);
     }

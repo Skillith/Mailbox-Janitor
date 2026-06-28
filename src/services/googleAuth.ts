@@ -86,3 +86,16 @@ export const logoutGoogle = (accessToken: string): void => {
     }
   }
 };
+
+/**
+ * Silent OAuth token refresh using prompt: 'none'
+ */
+export const refreshGoogleTokenSilently = (): void => {
+  if (tokenClient) {
+    try {
+      tokenClient.requestAccessToken({ prompt: 'none' });
+    } catch (e) {
+      console.warn('Silent token refresh failed:', e);
+    }
+  }
+};
